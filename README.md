@@ -66,7 +66,8 @@ curl -X POST http://127.0.0.1:8080/refresh \
 失败：
 
 - `400 {"ok": false, "error": "..."}` — 请求体不是 JSON，或缺 `ipb_member_id` / `ipb_pass_hash`
-- `502 {"ok": false, "error": "..."}` — 上游没签发 igneous（基础 Cookie 无效、出口 IP 不被站点接受、代理不通等）
+- `502 {"ok": false, "error": "Refresh failed: please check your account details, or this account does not have permission to access https://exhentai.org."}` — 刷新失败：上游没签发可用的 igneous。igneous 缺失、为空、或为占位值 `mystery` / `null` 都算失败（基础 Cookie 无效、账号无里站权限、出口 IP 不被站点接受等）
+- `502 {"ok": false, "error": "upstream request failed: ..."}` — 代理不通、超时等，请求根本没到达上游
 - `404` — 路径不是 `REFRESH_PATH`
 
 健康检查：`GET /healthz` → `{"ok": true}`，不会触发刷新。

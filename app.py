@@ -21,7 +21,9 @@ HTTP API (JSON in, JSON out):
                       "igneous": "..."},
           "cookie": "ipb_member_id=...; ipb_pass_hash=...; igneous=..."}
   -> 400 {"ok": false, "error": "..."}   bad input
-  -> 502 {"ok": false, "error": "..."}   upstream did not issue an igneous
+  -> 502 {"ok": false, "error": "..."}   upstream did not issue a usable
+                                         igneous (missing, empty, "mystery"
+                                         or "null" all count as failure)
 
   GET /healthz -> {"ok": true}           (never triggers a refresh)
 
@@ -67,6 +69,15 @@ PORT = int(os.environ.get("PORT", "8080"))
 TIMEOUT = float(os.environ.get("REFRESH_TIMEOUT", "30"))
 
 BASE_COOKIE_NAMES = ("ipb_member_id", "ipb_pass_hash")
+
+# exhentai answers a request it will not grant access to with a placeholder
+# igneous instead of a real one ("mystery"), and a missing/empty or literal
+# "null" value is just as unusable. All of them mean the refresh failed.
+INVALID_IGNEOUS_VALUES = {"", "mystery", "null"}
+REFRESH_FAILED_ERROR = (
+    "Refresh failed: please check your account details, or this account "
+    "does not have permission to access https://exhentai.org."
+)
 PROXY_SCHEMES = ("http", "https", "socks4", "socks4a", "socks5", "socks5h")
 MAX_BODY = 64 * 1024
 
@@ -202,16 +213,8 @@ class Handler(BaseHTTPRequestHandler):
             )
             return
         igneous = (merged.get("igneous") or "").strip()
-        if not igneous:
-            self._send_json(
-                502,
-                {
-                    "ok": False,
-                    "error": "upstream did not issue an igneous cookie "
-                    f"(HTTP {status}); check that the base cookies are valid "
-                    "and that the egress IP is accepted by exhentai",
-                },
-            )
+        if igneous.lower() in INVALID_IGNEOUS_VALUES:
+            self._send_json(502, {"ok": False, "error": REFRESH_FAILED_ERROR})
             return
         self._send_json(
             200,
