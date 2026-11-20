@@ -1,0 +1,13 @@
+services:
+  igneous_refresh:
+    build: .
+    image: igneous_refresh:latest
+    restart: unless-stopped
+    environment:
+      # Proxy used for the refresh request (http/https/socks4/socks4a/
+      # socks5/socks5h, auth allowed). Leave empty to connect directly.
+      REFRESH_PROXY: "${REFRESH_PROXY:-}"
+      # The only path that accepts refresh requests.
+      REFRESH_PATH: "${REFRESH_PATH:-/refresh}"
+    ports:
+      - "8080:8080"
